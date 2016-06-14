@@ -2,12 +2,17 @@ import os, future
 
 
 # TODO: Allow rule to have specific set of allowed commands after it.
-# Example: --foo bar baz
+# Example: --foo bar baz        -> WORKS
+#      BUT --foo bar baz barbaz -> DOES NOT
 # TODO: Add syntax for turning arguments into a list
 # Example: --foo=[1, 2, 3] -> @[1, 2, 3]
 # Example: --foo [1, 2, 3] -> @[1, 2, 3]
 # Example: --foo=1,2,3 -> @[1, 2, 3]
 # TODO: Write tests.
+# TODO: Make exceptions have the message be something that can be output to command line.
+# Basic idea is to have the exception being thrown be what gets shown to the use so they
+# know how they used the command line arguments wrong. Instead of being something for
+# the developers.
 
 
 type
