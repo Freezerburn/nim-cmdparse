@@ -27,6 +27,7 @@ type
     valueDelimiters: seq[char]
     rules: seq[CommandRule]
     helpText: string
+    parsed: bool
 
   CommandRuleType = enum
     ruleLong,
@@ -97,6 +98,8 @@ proc split(str: string, delimiter: char): (string, string) =
   result = (str[0 .. pos - 1], str[pos + 1 .. str.len - 1])
 
 proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
+  if parser.parsed:
+    return
   if parser.callback == nil:
     raise newException(ParseException, "No callback given for parsing!")
 
@@ -160,6 +163,7 @@ proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
       parser.helpText = parser.autogenHelpText()
     echo getCurrentExceptionMsg()
     echo parser.helpText
+  parser.parsed = true
 
 
 when isMainModule:
