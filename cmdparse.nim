@@ -152,6 +152,9 @@ when isMainModule:
 
   var parser = newCommandParser()
   parser.addLongRule("test", allowSpace = true)
+  parser.addLongRule("foo")
+  parser.addShortRule("t")
+  parser.addShortRule("f", allowNoDelimiter = true)
   parser.callback = testParseCallback1
   parser.parse()
   echo $parser
