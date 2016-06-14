@@ -15,6 +15,8 @@ import os, future
 # the developers.
 # TODO: Iterator over command line arguments in the callback format: (string, seq[string])
 # Returned as tuple.
+# Should return arguments in the same order they would be when being parsed with a callback.
+# Example: --foo:bar -b -> ("foo", @["bar"]), ("b", @[]) every time.
 
 
 type
