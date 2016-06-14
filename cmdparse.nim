@@ -54,16 +54,25 @@ proc newCommandParser*(commandArgs: seq[TaintedString] = nil, helpText: string =
   result = CommandParser(cmd: actualArgs, valueDelimiters: @[':', '='],
     rules: @[])
 
+proc validateNoDelimiters(parser: CommandParser, name: string) =
+  for delimiter in parser.valueDelimiters:
+    if delimiter in name:
+      raise newException(ParseException, "Cannot have delimiter character '" & delimiter & "' in argument '" & name & "'")
+
 proc newCommandRule(name: string, kind: CommandRuleType, allowSpace: bool = false, allowNoDelimiter: bool = false): CommandRule =
   CommandRule(name: name, kind: kind, value: nil, allowSpace: allowSpace, allowNoDelimiter: allowNoDelimiter)
 
 proc addShortRule*(parser: var CommandParser, argName: string, allowNoDelimiter: bool = false) =
+  parser.validateNoDelimiters(argName)
   parser.rules.add(newCommandRule(argName, ruleShort, allowNoDelimiter = allowNoDelimiter))
 
 proc addLongRule*(parser: var CommandParser, argName: string, allowSpace: bool = false) =
+  parser.validateNoDelimiters(argName)
   parser.rules.add(newCommandRule(argName, ruleLong, allowSpace = allowSpace))
 
 proc addBothRules*(parser: var CommandParser, argNames: array[2, string], allowSpace: bool = false, allowNoDelimiter: bool = false) =
+  parser.validateNoDelimiters(argNames[0])
+  parser.validateNoDelimiters(argNames[1])
   parser.addShortRule(argNames[0], allowNoDelimiter = allowNoDelimiter)
   parser.addLongRule(argNames[1], allowSpace = allowSpace)
 
@@ -150,11 +159,21 @@ when isMainModule:
   proc testParseCallback1(arg: string, values: seq[string]) =
     echo "callback arg: ", arg, ", value: ", $values
 
-  var parser = newCommandParser()
-  parser.addLongRule("test", allowSpace = true)
-  parser.addLongRule("foo")
-  parser.addShortRule("t")
-  parser.addShortRule("f", allowNoDelimiter = true)
-  parser.callback = testParseCallback1
-  parser.parse()
-  echo $parser
+  block:
+    var parser = newCommandParser()
+    try:
+      parser.addLongRule("foo:")
+      doAssert false
+    except:
+      doAssert true
+
+
+  block:
+    var parser = newCommandParser()
+    parser.addLongRule("test", allowSpace = true)
+    parser.addLongRule("foo")
+    parser.addShortRule("t")
+    parser.addShortRule("f", allowNoDelimiter = true)
+    parser.callback = testParseCallback1
+    parser.parse()
+    echo $parser
