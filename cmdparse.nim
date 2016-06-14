@@ -13,6 +13,8 @@ import os, future
 # Basic idea is to have the exception being thrown be what gets shown to the use so they
 # know how they used the command line arguments wrong. Instead of being something for
 # the developers.
+# TODO: Iterator over command line arguments in the callback format: (string, seq[string])
+# Returned as tuple.
 
 
 type
