@@ -163,8 +163,10 @@ when isMainModule:
     var parser = newCommandParser()
     try:
       parser.addLongRule("foo:")
+      echo("TEST 'no delimiter in rule': FAILED")
       doAssert false
     except:
+      echo("TEST 'no delimiter in rule': PASSED")
       doAssert true
 
 
