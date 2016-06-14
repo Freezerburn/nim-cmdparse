@@ -121,15 +121,6 @@ proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
             rule.value = value
           elif rule.allowSpace and parser.curIdx + 1 < parser.cmd.len:
             rule.value = parser.cmd[parser.curIdx + 1]
-          # for delimiter in parser.valueDelimiters:
-          #   if delimiter in arg:
-          #     let (_, value) = arg.split(delimiter)
-          #     rule.value = value
-          #     value_in_arg = true
-          #     break
-          # if not value_in_arg and rule.allowSpace:
-          #   if parser.curIdx + 1 < parser.cmd.len:
-          #     rule.value = parser.cmd[parser.curIdx + 1]
 
           if rule.value != nil:
             parser.callback(baseArg, @[rule.value])
