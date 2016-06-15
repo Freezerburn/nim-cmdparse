@@ -200,7 +200,12 @@ proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
       else:
         # Commang argument path
         # Example: foobar
-        echo "Command arg: ", arg
+        rule = parser.rules.ruleFromArgName(arg)
+        if rule.kind != ruleCommand:
+          raise newException(ParseException, "Found argument '" & arg & "' where the rule is not a command kind.")
+
+        rule.exists = true
+        parser.callback(arg, @[])
 
       parser.curIdx += 1
   except ParseException:
@@ -232,6 +237,7 @@ when isMainModule:
     parser.addLongRule("foo")
     parser.addShortRule('t')
     parser.addShortRule('f', allowNoDelimiter = true)
+    parser.addCommandRule("comm")
     parser.callback = testParseCallback1
     parser.parse()
     echo $parser
