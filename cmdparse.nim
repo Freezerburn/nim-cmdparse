@@ -45,11 +45,26 @@ type
     allowNoDelimiter: bool
 
 
+proc `$!`[T](t: T): string =
+  if t == nil:
+    "nil"
+  else:
+    $t
+
 proc `$`*(commandParser: CommandParser): string =
   "CommandParser{cmd:" & $commandParser.cmd &
     "; curIdx:" & $commandParser.curIdx &
     "; valueDelimiters:" & $commandParser.valueDelimiters &
     "; rules:" & $commandParser.rules &
+    "}"
+
+proc `$`(rule: CommandRule): string =
+  "CommandRule{name:" & rule.name &
+    "; kind:" & $rule.kind &
+    "; exists:" & $rule.exists &
+    "; value:" & $!rule.value &
+    "; allowSpace:" & $rule.allowSpace &
+    "; allowNoDelimiter:" & $rule.allowNoDelimiter &
     "}"
 
 proc autogenHelpText(parser: CommandParser): string =
@@ -72,9 +87,10 @@ proc validateNoDelimiters(parser: CommandParser, name: string) =
 proc newCommandRule(name: string, kind: CommandRuleType, allowSpace: bool = false, allowNoDelimiter: bool = false): CommandRule =
   CommandRule(name: name, kind: kind, value: nil, allowSpace: allowSpace, allowNoDelimiter: allowNoDelimiter)
 
-proc addShortRule*(parser: var CommandParser, argName: string, allowNoDelimiter: bool = false) =
-  parser.validateNoDelimiters(argName)
-  parser.rules.add(newCommandRule(argName, ruleShort, allowNoDelimiter = allowNoDelimiter))
+proc addShortRule*(parser: var CommandParser, argName: char, allowNoDelimiter: bool = false) =
+  let stringArgName = $argName
+  parser.validateNoDelimiters(stringArgName)
+  parser.rules.add(newCommandRule(stringArgName, ruleShort, allowNoDelimiter = allowNoDelimiter))
 
 proc addLongRule*(parser: var CommandParser, argName: string, allowSpace: bool = false) =
   parser.validateNoDelimiters(argName)
@@ -83,7 +99,9 @@ proc addLongRule*(parser: var CommandParser, argName: string, allowSpace: bool =
 proc addBothRules*(parser: var CommandParser, argNames: array[2, string], allowSpace: bool = false, allowNoDelimiter: bool = false) =
   parser.validateNoDelimiters(argNames[0])
   parser.validateNoDelimiters(argNames[1])
-  parser.addShortRule(argNames[0], allowNoDelimiter = allowNoDelimiter)
+  if argNames[0].len > 2:
+    raise newException(ParseException, "Given a short arg when adding both that has more than one character.")
+  parser.addShortRule(argNames[0][0], allowNoDelimiter = allowNoDelimiter)
   parser.addLongRule(argNames[1], allowSpace = allowSpace)
 
 proc addCommandRule*(parser: var CommandParser, argName: string) =
@@ -107,6 +125,11 @@ proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
 
   try:
     for arg in parser.cmd:
+      var
+        value: string
+        rule: CommandRule
+        baseArg: string
+        valueInArg = false
       if arg[0] == '-':
         if arg[1] == '-':
           # Long argument path
@@ -114,11 +137,6 @@ proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
           # Example: --test=FOO_BAR
           # Example: --test:FOO_BAR
           # Example: --test FOO_BAR
-          var
-            value: string
-            rule: CommandRule
-            baseArg: string
-            valueInArg = false
 
           # Immediately check argument for delimiters, so that we can determine what the base
           # part of the argument is.
@@ -153,7 +171,32 @@ proc parse*(parser: var CommandParser) {.raises: [ParseException, Exception].} =
           # Example: -DFOO_BAR
           # Example: -T:foo
           # Example: -T=foo
-          echo "Short arg: ", arg
+          for delimiter in parser.valueDelimiters:
+            if delimiter in arg:
+              baseArg = $arg[1]
+              value = arg[3 .. arg.len - 1]
+              valueInArg = true
+              break
+          if not valueInArg:
+            baseArg = $arg[1]
+
+          rule = parser.rules.ruleFromArgName(baseArg)
+          if rule.kind != ruleShort:
+            echo $rule
+            raise newException(ParseException, "Got argument '" & arg & "' which is supposed to be a long-form argument but was declared as a short-form one.")
+
+          if rule.allowNoDelimiter:
+            value = arg[2 .. arg.len - 1]
+          elif arg.len > 2 and not valueInArg:
+            raise newException(ParseException, "Found argument '" & arg & "' which has more than one character.")
+
+          rule.exists = true
+          rule.value = value
+
+          if value != nil:
+            parser.callback(baseArg, @[value])
+          else:
+            parser.callback(baseArg, @[])
       else:
         # Commang argument path
         # Example: foobar
@@ -187,8 +230,8 @@ when isMainModule:
     var parser = newCommandParser()
     parser.addLongRule("test", allowSpace = true)
     parser.addLongRule("foo")
-    parser.addShortRule("t")
-    parser.addShortRule("f", allowNoDelimiter = true)
+    parser.addShortRule('t')
+    parser.addShortRule('f', allowNoDelimiter = true)
     parser.callback = testParseCallback1
     parser.parse()
     echo $parser
